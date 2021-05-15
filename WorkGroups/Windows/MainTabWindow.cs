@@ -18,12 +18,12 @@ namespace The1nk.WorkGroups.Windows
 
         private static readonly Texture2D ReorderUp = ContentFinder<Texture2D>.Get("UI/Buttons/ReorderUp");
         private static readonly Texture2D ReorderDown = ContentFinder<Texture2D>.Get("UI/Buttons/ReorderDown");
+        private WorkGroupsSettings _settings;
 
         public override void DoWindowContents(UnityEngine.Rect inRect) {
             base.DoWindowContents(inRect);
-
-            string buffer = WorkGroupsSettings.GetSettings.HoursUpdateInterval.ToString("0");
-            string buffer2 = WorkGroupsSettings.GetSettings.MaxPriority.ToString("0");
+            string buffer = _settings.HoursUpdateInterval.ToString("0");
+            string buffer2 = _settings.MaxPriority.ToString("0");
 
             var cbLocation = new Rect(inRect);
             cbLocation.x += horizontalPadding;
@@ -31,44 +31,47 @@ namespace The1nk.WorkGroups.Windows
             cbLocation.width -= 2 * horizontalPadding;
             cbLocation.height = textHeight;
 
-            Widgets.CheckboxLabeled(cbLocation, "cbEnabled".Translate(), ref WorkGroupsSettings.GetSettings.Enabled);
+            Widgets.CheckboxLabeled(cbLocation, "cbEnabled".Translate(), ref _settings.Enabled);
 
             cbLocation.y += textHeight + verticalPadding;
-            Widgets.CheckboxLabeled(cbLocation, "cbSlavePriorities".Translate(), ref WorkGroupsSettings.GetSettings.SetPrioritiesForSlaves, !WorkGroupsSettings.GetSettings.SsInstalled);
+            Widgets.CheckboxLabeled(cbLocation, "cbSlavePriorities".Translate(), ref _settings.SetPrioritiesForSlaves, !_settings.SsInstalled);
 
             cbLocation.y += textHeight + verticalPadding;
-            Widgets.CheckboxLabeled(cbLocation, "cbPrisonerPriorities".Translate(), ref WorkGroupsSettings.GetSettings.SetPrioritiesForPrisoners, !WorkGroupsSettings.GetSettings.PlInstalled);
+            Widgets.CheckboxLabeled(cbLocation, "cbPrisonerPriorities".Translate(), ref _settings.SetPrioritiesForPrisoners, !_settings.PlInstalled);
 
-            if (WorkGroupsSettings.GetSettings.RjwInstalled) {
+            if (_settings.RjwInstalled) {
                 cbLocation.y += textHeight + verticalPadding;
-                Widgets.CheckboxLabeled(cbLocation, "cbRjwPriorities".Translate(), ref WorkGroupsSettings.GetSettings.SetPrioritiesForRjwWorkers, !WorkGroupsSettings.GetSettings.RjwInstalled);
+                Widgets.CheckboxLabeled(cbLocation, "cbRjwPriorities".Translate(), ref _settings.SetPrioritiesForRjwWorkers, !_settings.RjwInstalled);
             }
 
             cbLocation.y += textHeight + verticalPadding;
-            Widgets.CheckboxLabeled(cbLocation, "cbSetPawnTitles".Translate(), ref WorkGroupsSettings.GetSettings.SetPawnTitles);
+            Widgets.CheckboxLabeled(cbLocation, "cbSetPawnTitles".Translate(), ref _settings.SetPawnTitles);
 
             cbLocation.y += textHeight + verticalPadding;
-            Widgets.CheckboxLabeled(cbLocation, "cbClearSchedules".Translate(), ref WorkGroupsSettings.GetSettings.ClearOutSchedules);
+            Widgets.CheckboxLabeled(cbLocation, "cbSetPawnBadges".Translate(), ref _settings.SetBadges);
+
+            cbLocation.y += textHeight + verticalPadding;
+            Widgets.CheckboxLabeled(cbLocation, "cbClearSchedules".Translate(), ref _settings.ClearOutSchedules);
 
             cbLocation.y += textHeight + verticalPadding;
             Widgets.CheckboxLabeled(cbLocation, "cbForceBedRest".Translate(),
-                ref WorkGroupsSettings.GetSettings.ForcedBedRestForInjuredPawns);
+                ref _settings.ForcedBedRestForInjuredPawns);
 
             cbLocation.y += textHeight + verticalPadding;
             Widgets.CheckboxLabeled(cbLocation, "cbUseLearningRates".Translate(),
-                ref WorkGroupsSettings.GetSettings.UseLearningRates);
+                ref _settings.UseLearningRates);
 
             cbLocation.y += textHeight + verticalPadding;
-            Widgets.CheckboxLabeled(cbLocation, "cbVerboseLogging".Translate(), ref WorkGroupsSettings.GetSettings.VerboseLogging);
+            Widgets.CheckboxLabeled(cbLocation, "cbVerboseLogging".Translate(), ref _settings.VerboseLogging);
             
             cbLocation.y += textHeight + verticalPadding;
             Widgets.TextFieldNumericLabeled(cbLocation, "UpdateInterval".Translate(),
-                ref WorkGroupsSettings.GetSettings.HoursUpdateInterval,
+                ref _settings.HoursUpdateInterval,
                 ref buffer, 1, 1000);
 
             cbLocation.y += textHeight + verticalPadding;
             Widgets.TextFieldNumericLabeled(cbLocation, "MaxPriority".Translate(),
-                ref WorkGroupsSettings.GetSettings.MaxPriority,
+                ref _settings.MaxPriority,
                 ref buffer2);
             cbLocation.y += textHeight + verticalPadding;
 
@@ -79,14 +82,14 @@ namespace The1nk.WorkGroups.Windows
             btnDel.x += btnAdd.width + horizontalPadding;
 
             if (Widgets.ButtonText(btnAdd, "btnAdd".Translate())) {
-                WorkGroupsSettings.GetSettings.WorkGroups.Add(
-                    new WorkGroup($"NewWorkGroup".Translate(WorkGroupsSettings.GetSettings.WorkGroups.Count + 1)));
+                _settings.WorkGroups.Add(
+                    new WorkGroup($"NewWorkGroup".Translate(_settings.WorkGroups.Count + 1)));
             }
 
             if (Widgets.ButtonText(btnDel, "btnDel".Translate())) {
-                var lst = WorkGroups.WorkGroupsSettings.GetSettings.WorkGroups.Select(w =>
+                var lst = _settings.WorkGroups.Select(w =>
                     new FloatMenuOption($"DeleteWorkGroup".Translate(w.Name),
-                        () => { WorkGroups.WorkGroupsSettings.GetSettings.WorkGroups.Remove(w); })).ToList();
+                        () => { _settings.WorkGroups.Remove(w); })).ToList();
                 if (lst.Any())
                     Find.WindowStack.Add(new FloatMenu(lst));
             }
@@ -114,16 +117,17 @@ namespace The1nk.WorkGroups.Windows
             DrawHeader(cbLocation);
             cbLocation.y += textHeight + verticalPadding;
 
-            var outRect = new Rect(cbLocation.x, cbLocation.y, cbLocation.width, 300);
+            var outRect = new Rect(cbLocation.x, cbLocation.y, cbLocation.width,
+                inRect.height - cbLocation.y - verticalPadding);
             var viewRect = new Rect(0, 0, outRect.width - 18f,
-                (textHeight + verticalPadding) * WorkGroupsSettings.GetSettings.WorkGroups.Count + 100);
+                (textHeight + verticalPadding) * _settings.WorkGroups.Count + 100);
             Widgets.BeginScrollView(outRect, ref this.scrollPosition, viewRect);
 
             var groupRect = inRect.AtZero();
             groupRect.height = textHeight;
 
-            for (int i = 0; i < WorkGroupsSettings.GetSettings.WorkGroups.Count; i++) {
-                DrawGroup(WorkGroupsSettings.GetSettings.WorkGroups[i], groupRect);
+            for (int i = 0; i < _settings.WorkGroups.Count; i++) {
+                DrawGroup(_settings.WorkGroups[i], groupRect);
                 groupRect.y += textHeight + verticalPadding;
             }
             Widgets.EndScrollView();
@@ -141,7 +145,6 @@ namespace The1nk.WorkGroups.Windows
             txtRec.width = 40;
             if (Widgets.ButtonText(txtRec, "btnJobs".Translate())) {
                 Find.WindowStack.Add(new FloatMenu(GetWorkTypesList(group)));
-                WorkGroupsSettings.GetSettings.Component?.RunNow();
             }
 
             TooltipHandler.TipRegion(txtRec,
@@ -198,8 +201,17 @@ namespace The1nk.WorkGroups.Windows
             Widgets.TextFieldNumeric(txtRec, ref @group.TargetQuantity, ref qtyBuffer, 0, 999);
             newLoc.x += 70;
 
-            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.DisableTitleForThisWorkGroup, newLoc.height, !WorkGroupsSettings.GetSettings.SetPawnTitles);
-            newLoc.x += 90;
+            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.DisableTitleForThisWorkGroup, newLoc.height, !_settings.SetPawnTitles);
+            newLoc.x += 80;
+
+            txtRec = new Rect(newLoc);
+            txtRec.width = 45;
+            if (Widgets.ButtonText(txtRec, "btnBadge".Translate())) {
+                var lst = GetBadgeList(group);
+                if (lst.Any())
+                    Find.WindowStack.Add(new FloatMenu(lst));
+            }
+            newLoc.x += 50;
             
             Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.AssignToEveryone, newLoc.height);
             newLoc.x += 70;
@@ -207,33 +219,56 @@ namespace The1nk.WorkGroups.Windows
             Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.ColonistsAllowed, newLoc.height);
             newLoc.x += 70;
             
-            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.SlavesAllowed, newLoc.height, !WorkGroupsSettings.GetSettings.SsInstalled);
+            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.SlavesAllowed, newLoc.height, !_settings.SsInstalled);
             newLoc.x += 50;
             
-            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.PrisonersAllowed, newLoc.height, !WorkGroupsSettings.GetSettings.PlInstalled);
+            Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.PrisonersAllowed, newLoc.height, !_settings.PlInstalled);
             newLoc.x += 70;
             
-            if (WorkGroupsSettings.GetSettings.RjwInstalled) {
-                Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.RjwWorkersAllowed, newLoc.height, !WorkGroupsSettings.GetSettings.RjwInstalled);
-                newLoc.x += 70;
+            if (_settings.RjwInstalled) {
+                Widgets.Checkbox(new Vector2(newLoc.x, newLoc.y), ref @group.RjwWorkersAllowed, newLoc.height, !_settings.RjwInstalled);
+                newLoc.x += 55;
             }
 
             txtRec = new Rect(newLoc);
             txtRec.width = 15;
             if (Widgets.ButtonImage(txtRec, ReorderUp)) {
-                var newIndex = Math.Max(WorkGroupsSettings.GetSettings.WorkGroups.IndexOf(group) - 1, 0);
-                WorkGroupsSettings.GetSettings.WorkGroups.Remove(group);
-                WorkGroupsSettings.GetSettings.WorkGroups.Insert(newIndex, group);
+                var newIndex = Math.Max(_settings.WorkGroups.IndexOf(group) - 1, 0);
+                _settings.WorkGroups.Remove(group);
+                _settings.WorkGroups.Insert(newIndex, group);
             }
 
             newLoc.x += 20;
             txtRec = new Rect(newLoc);
             txtRec.width = 15;
             if (Widgets.ButtonImage(txtRec, ReorderDown)) {
-                var newIndex = Math.Min(WorkGroupsSettings.GetSettings.WorkGroups.IndexOf(group) + 1, WorkGroupsSettings.GetSettings.WorkGroups.Count - 1);
-                WorkGroupsSettings.GetSettings.WorkGroups.Remove(group);
-                WorkGroupsSettings.GetSettings.WorkGroups.Insert(newIndex, group);
+                var newIndex = Math.Min(_settings.WorkGroups.IndexOf(group) + 1, _settings.WorkGroups.Count - 1);
+                _settings.WorkGroups.Remove(group);
+                _settings.WorkGroups.Insert(newIndex, group);
             }
+        }
+
+        private List<FloatMenuOption> GetBadgeList(WorkGroup group) {
+            var ret = new List<FloatMenuOption>();
+
+            if (!WorkGroupsSettings.GetSettings().AllBadges.Any())
+                return ret;
+
+            if (WorkGroupsSettings.GetSettings().AllBadges.All(b => b.Def.defName != @group.Badge)) {
+                group.Badge = "";
+            }
+
+            if (!string.IsNullOrEmpty(group.Badge)) {
+                ret.Add(new FloatMenuOption("ActiveBadge".Translate(), () => group.Badge = "",
+                    WorkGroupsSettings.GetSettings().AllBadges.First(b => b.Def.defName == group.Badge).Texture,
+                    Color.white));
+            }
+
+            ret.AddRange(WorkGroupsSettings.GetSettings().AllBadges.Where(b => group.Badge != b.Def.defName)
+                .Select(b =>
+                    new FloatMenuOption(b.Def.defName, () => group.Badge = b.Def.defName, b.Texture, Color.white)));
+
+            return ret;
         }
 
         private void DrawHeader(Rect cbLocation) {
@@ -249,7 +284,10 @@ namespace The1nk.WorkGroups.Windows
             newLoc.x += 70;
 
             Widgets.Label(newLoc, "gpHideTitles".Translate());
-            newLoc.x += 90;
+            newLoc.x += 80;
+
+            Widgets.Label(newLoc, "gpBadge".Translate());
+            newLoc.x += 50;
             
             Widgets.Label(newLoc, "gpEveryone".Translate());
             newLoc.x += 70;
@@ -263,20 +301,19 @@ namespace The1nk.WorkGroups.Windows
             Widgets.Label(newLoc, "gpPrisoners".Translate());
             newLoc.x += 70;
             
-            if (WorkGroupsSettings.GetSettings.RjwInstalled) {
+            if (_settings.RjwInstalled) {
                 Widgets.Label(newLoc, "gpWhores".Translate());
                 newLoc.x += 50;
             }
         }
 
         public override void PostClose() {
-            WorkGroupsSettings.GetSettings.Component?.RunNow();
-
+            Find.CurrentMap.GetComponent<WorkGroupsMapComponent>().RunNow();
             base.PostClose();
         }
 
         public override void PreOpen() {
-            WorkGroupsSettings.GetSettings.Component?.RunNow();
+            _settings = Find.CurrentMap.GetComponent<WorkGroupsMapComponent>().Settings;
 
             base.PreOpen();
         }
@@ -291,7 +328,7 @@ namespace The1nk.WorkGroups.Windows
             ret.Add(new FloatMenuOption("---", () => LogHelper.Verbose("Clicked the divider -_-;;")));
 
             // Disabled ones
-            ret.AddRange(WorkGroupsSettings.GetSettings.AllWorkTypes
+            ret.AddRange(WorkGroupsSettings.GetSettings().AllWorkTypes
                 .Where(wt => wt.visible && !group.Items.Contains(wt)).OrderByDescending(wt => wt.naturalPriority)
                 .Select(wt => new FloatMenuOption($"ddDisabled".Translate(wt.labelShort), () => group.Items.Add(wt))));
 
@@ -308,7 +345,7 @@ namespace The1nk.WorkGroups.Windows
             ret.Add(new FloatMenuOption("---", () => LogHelper.Verbose("Clicked the divider -_-;;")));
 
             // Disabled ones
-            ret.AddRange(WorkGroupsSettings.GetSettings.WorkGroups.Select(g => g.Name)
+            ret.AddRange(_settings.WorkGroups.Select(g => g.Name)
                 .Where(g => !group.CanBeAssignedWith.Contains(g) && group.Name != g)
                 .OrderBy(g => g)
                 .Select(g => new FloatMenuOption($"ddDisabled".Translate(g), () => group.CanBeAssignedWith.Add(g))));
@@ -316,32 +353,13 @@ namespace The1nk.WorkGroups.Windows
             return ret;
         }
 
-        private List<FloatMenuOption> GetStatsList(WorkGroup group) {
-            var ret = new List<FloatMenuOption>();
-
-            // Enabled ones
-            ret.AddRange(group.ImportantStats.Select(wt =>
-                new FloatMenuOption($"ddEnabled".Translate(wt.LabelForFullStatListCap), () => group.ImportantStats.Remove(wt))));
-
-            ret.Add(new FloatMenuOption("---", () => LogHelper.Verbose("Clicked the divider -_-;;")));
-
-            // Disabled ones
-            ret.AddRange(WorkGroupsSettings.GetSettings.AllStatDefs.Where(wt => !group.ImportantStats.Contains(wt))
-                .Select(wt =>
-                    new FloatMenuOption($"ddDisabled".Translate(wt.LabelForFullStatListCap),
-                        () => group.ImportantStats.Add(wt))));
-
-            "lol".Translate();
-            return ret;
-        }
-
         private List<FloatMenuOption> GetLoadPresetList() {
             var ret = new List<FloatMenuOption>();
 
-            var saves = WorkGroupsSettings.GetSettings.GetAllPresetSaves();
+            var saves = _settings.GetAllPresetSaves();
 
             foreach (var save in saves) {
-                ret.Add(new FloatMenuOption(save, () => WorkGroupsSettings.GetSettings.LoadFromPreset(save)));
+                ret.Add(new FloatMenuOption(save, () => _settings.LoadFromPreset(save)));
             }
 
             return ret;
@@ -350,14 +368,14 @@ namespace The1nk.WorkGroups.Windows
         private List<FloatMenuOption> GetSavePresetList() {
             var ret = GetLoadPresetList();
 
-            ret.ForEach(r => r.action = () => WorkGroupsSettings.GetSettings.SaveToPreset(r.Label));
+            ret.ForEach(r => r.action = () => _settings.SaveToPreset(r.Label));
 
             ret.Add(new FloatMenuOption("---", () => LogHelper.Verbose("Clicked the divider -_-;;")));
             
             ret.Add(new FloatMenuOption("ddNew".Translate(), () => {
                 var newTextWindow = new RenameWindow("ddNew".Translate());
                 Action<string> saveAction = name => {
-                    WorkGroupsSettings.GetSettings.SaveToPreset(name);
+                    _settings.SaveToPreset(name);
                 };
                 newTextWindow.Action = saveAction;
                 Find.WindowStack.Add(newTextWindow);
